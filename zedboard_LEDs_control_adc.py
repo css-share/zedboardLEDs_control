@@ -47,7 +47,8 @@ class App:
 									height=1,width=20).grid(row=5,column=1)
 		self.button_getData = Button(self.mainPanel,command=self.getData,text="Get Data",
 									height=1,width=20).grid(row=6,column=1)
-
+		self.button_readADC = Button(self.mainPanel,command=self.readADC,text="Read ADC",
+									height=1,width=20).grid(row=4,column=0)
 		self.numDataPoints = IntVar()
 		Entry(self.mainPanel,width=5,textvariable=self.numDataPoints).grid(row=6,column=2,sticky='w',padx=5)
 		self.numDataPoints.set(1000)
@@ -130,6 +131,22 @@ class App:
 		#send 0x72 for RIGHT command
 		self.port.write(chr(0x72))
 
+	def readADC(self):
+		#send 0x88 for read ADC command
+		self.port.write(chr(0x88))
+
+        #read 2 data points from uart
+		uartString=self.port.read(2)
+
+		print "1: %x"%(ord(uartString[0]))
+		print "2: %x"%(ord(uartString[1]))
+
+		adc_result = ord(uartString[0]) << 8
+		adc_result += ord(uartString[1])
+
+		print"ADC result: %d"%(adc_result)
+		print "Voltage: %.3fV"%(float(adc_result)/65535*3.3)
+
 	def loadSawtoothUp(self):
 		print "Loading Sawtooth Up"
 		#send 0x62 for loading sawtooth_up waveform data
@@ -183,5 +200,6 @@ class App:
 	def onExit(self):
 		self.root.destroy()
 		sys.exit()
+		#self.root.quit()
 
 app = App()
