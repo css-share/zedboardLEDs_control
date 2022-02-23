@@ -1,13 +1,22 @@
-from Tkinter import *
-import ttk
+from tkinter import *
+import tkinter.ttk
 import serial
-from ConfigParser import ConfigParser
+from configparser import ConfigParser
 import os
 import platform
 import matplotlib
 matplotlib.use("TkAgg")
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2TkAgg
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 from matplotlib.figure import Figure
+import sys
+
+UP_COMMAND =        0x75
+DOWN_COMMAND =      0x64
+PAUSE_COMMAND =     0x20
+LEFT_COMMAND =      0x6C
+RIGHT_COMMAND =     0x72
+READ_ADC_COMMAND =  0x88
+
 
 
 class App:
@@ -36,7 +45,7 @@ class App:
     	#---------------------------------------------------------------------------------
 
 
-		ttk.Separator(self.mainPanel,orient='horizontal').grid(row=3,column=0,columnspan=3,
+		tkinter.ttk.Separator(self.mainPanel,orient='horizontal').grid(row=3,column=0,columnspan=3,
 																pady=15,sticky='ew')
 
 
@@ -68,7 +77,7 @@ class App:
 		self.ax = self.fig.add_subplot(111)
 		self.t_line, = self.ax.plot(self.dataPoints)
 		canvas = FigureCanvasTkAgg(self.fig,self.mainPanel)
-		canvas.show()
+		canvas.draw()
 		canvas.get_tk_widget().grid(row=8,column=0,columnspan=5)
 
         #---------------------------------------------------------------------------------
@@ -87,7 +96,7 @@ class App:
 		self.ax = self.fig.add_subplot(111)
 		self.t_line, = self.ax.plot(self.dataPoints)
 		canvas = FigureCanvasTkAgg(self.fig,self.mainPanel)
-		canvas.show()
+		canvas.draw()
 		canvas.get_tk_widget().grid(row=8,column=0,columnspan=5,pady=10)
 
 	def read_config_file(self):
@@ -97,7 +106,7 @@ class App:
 		c_file = open(cwd + '/config/' + config_file_name)
 
 		config_file = ConfigParser()
-		config_file.readfp(c_file)
+		config_file.read_file(c_file)
 
 		if platform.system() == 'Windows':
 			self.COMport = config_file.get('Port Settings','win_COM_port')
@@ -113,52 +122,52 @@ class App:
 
 	def sendUp(self):
 		#send 0x75 for UP command
-		self.port.write(chr(0x75))
+		self.port.write(bytearray([UP_COMMAND]))
 
 	def sendDown(self):
 		#send 0x64 for DOWN command
-		self.port.write(chr(0x64))
+		self.port.write(bytearray([DOWN_COMMAND]))
 
 	def sendPause(self):
 		#send 0x20 for PAUSE command
-		self.port.write(chr(0x20))
+		self.port.write(bytearray([PAUSE_COMMAND]))
 
 	def sendLeft(self):
 		#send 0x6C for LEFT command
-		self.port.write(chr(0x6C))
+		self.port.write(bytearray([LEFT_COMMAND]))
 
 	def sendRight(self):
 		#send 0x72 for RIGHT command
-		self.port.write(chr(0x72))
+		self.port.write(bytearray([RIGHT_COMMAND]))
 
 	def readADC(self):
 		#send 0x88 for read ADC command
-		self.port.write(chr(0x88))
+		self.port.write(bytearray([READ_ADC_COMMAND]))
 
         #read 2 data points from uart
 		uartString=self.port.read(2)
 
-		print "1: %x"%(ord(uartString[0]))
-		print "2: %x"%(ord(uartString[1]))
+		print("1: %x"%(ord(uartString[0])))
+		print("2: %x"%(ord(uartString[1])))
 
 		adc_result = ord(uartString[0]) << 8
 		adc_result += ord(uartString[1])
 
-		print"ADC result: %d"%(adc_result)
-		print "Voltage: %.3fV"%(float(adc_result)/65535*3.3)
+		print("ADC result: %d"%(adc_result))
+		print("Voltage: %.3fV"%(float(adc_result)/65535*3.3))
 
 	def loadSawtoothUp(self):
-		print "Loading Sawtooth Up"
+		print("Loading Sawtooth Up")
 		#send 0x62 for loading sawtooth_up waveform data
 		self.port.write(chr(0x62))
 
 	def loadSawtoothDown(self):
-		print "Loading Sawtooth Down"
+		print("Loading Sawtooth Down")
 		#send 0x63 for loading sawtooth_down waveform data
 		self.port.write(chr(0x63))
 
 	def getData(self):
-		print "flushing data at input..."
+		print("flushing data at input...")
 		self.port.flushInput()
 
 		#the zedboard command for reading data
@@ -168,7 +177,7 @@ class App:
 		numberByte1 = numPoints >> 8
 		numberByte2 = numPoints & 0xFF
 
-		print "Getting Data (%d values)"
+		print("Getting Data (%d values)")
 		self.port.write(bytearray([cmd,numberByte1,numberByte2]))
 
 		#read expected number of data points from uart
@@ -178,8 +187,8 @@ class App:
 		for _byte in uartString:
 			retData.append(ord(_byte))
 
-		print ("number of bytes returned : %d"%(len(uartString)))
-		print ("number of bytes converted: %d"%(len(retData)))
+		print(("number of bytes returned : %d"%(len(uartString))))
+		print(("number of bytes converted: %d"%(len(retData))))
 
 		if len(retData) > 0:
 			self.dataPoints = retData
@@ -187,19 +196,18 @@ class App:
 			self.update_plot()
 
 		numToPrint = 15
-		print ("printing first %d values..."%(numToPrint))
+		print(("printing first %d values..."%(numToPrint)))
 		for i in range(numToPrint):
-			print ("  %d: %s"%(i,retData[i]))
+			print(("  %d: %s"%(i,retData[i])))
 
 	def FlushInput(self):
-		print "flushing input..."
+		print("flushing input...")
 		self.port.flushInput()
-		print self.numDataPoints.get()
-		print "done"
+		print(self.numDataPoints.get())
+		print("done")
 
 	def onExit(self):
 		self.root.destroy()
 		sys.exit()
-		#self.root.quit()
 
 app = App()
